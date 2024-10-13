@@ -11,7 +11,7 @@ export default function Index() {
                     // The `app/(app)/_layout.tsx` will redirect to the sign-in screen.
                     signOut();
                 }}>
-                salesperson
+                Sign Out
             </Text>
         </View>
     );

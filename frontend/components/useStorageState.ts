@@ -2,9 +2,10 @@ import { useEffect, useCallback, useReducer } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+// Type definition for the state hook
 type UseStateHook<T> = [[boolean, T | null], (value: T | null) => void];
 
-// Reducer function for updating the state
+// Hook to manage asynchronous state
 function useAsyncState<T>(
     initialValue: [boolean, T | null] = [true, null],
 ): UseStateHook<T> {
@@ -14,7 +15,8 @@ function useAsyncState<T>(
     ) as UseStateHook<T>;
 }
 
-// Function to set the storage item
+// Function to set storage item asynchronously
+// Function to set storage item asynchronously
 export async function setStorageItemAsync(key: string, value: string | null) {
     if (Platform.OS === 'web') {
         try {
@@ -27,7 +29,7 @@ export async function setStorageItemAsync(key: string, value: string | null) {
             console.error('Local storage is unavailable:', e);
         }
     } else {
-        if (value === null) {
+        if (value == null) {
             await SecureStore.deleteItemAsync(key);
         } else {
             await SecureStore.setItemAsync(key, value);
@@ -35,43 +37,42 @@ export async function setStorageItemAsync(key: string, value: string | null) {
     }
 }
 
-// Hook to manage state using secure or local storage
-export function useStorageState(key: string): UseStateHook<string> {
-    const [state, setState] = useAsyncState<string>();
+// Custom hook to manage storage state
+// Custom hook to manage storage state
+// Custom hook to manage storage state
+export function useStorageState<T>(key: string): UseStateHook<T> {
+    const [state, setState] = useAsyncState<T>(); // Use the generic type T
 
-    // Get the value from storage on mount
+    // Effect to retrieve value from storage
     useEffect(() => {
-        if (Platform.OS === 'web') {
+        const fetchStoredValue = async () => {
             try {
-                if (typeof localStorage !== 'undefined') {
-                    const storedValue = localStorage.getItem(key);
-                    setState(storedValue);
+                let value: string | null;
+
+                if (Platform.OS === 'web') {
+                    value = localStorage.getItem(key);
+                } else {
+                    value = await SecureStore.getItemAsync(key);
                 }
+
+                setState(value ? (JSON.parse(value) as T) : null); // Parse the value if it's not null
             } catch (e) {
-                console.error('Local storage is unavailable:', e);
+                console.error('Failed to retrieve value from storage:', e);
             }
-        } else {
-            SecureStore.getItemAsync(key).then(value => {
-                setState(value);
-            });
-        }
+        };
+
+        fetchStoredValue();
     }, [key]);
 
-    // Set the value in state and storage
+    // Function to set value in state and storage
     const setValue = useCallback(
-        (value: string | null) => {
-            console.log(`Setting value: ${value} for key: ${key}`); // Log the value and key
+        (value: T | null) => {
             setState(value);
-            setStorageItemAsync(key, value).then(() => {
-                console.log(`Value successfully stored for key: ${key}`); // Log after async storage is done
-            }).catch((error) => {
-                console.error(`Error setting storage item for key: ${key}`, error); // Log error if any
-            });
+            setStorageItemAsync(key, value ? JSON.stringify(value) : null); // Convert to string before storing
         },
         [key]
     );
 
-
-
     return [state, setValue];
 }
+

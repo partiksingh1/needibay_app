@@ -1,13 +1,14 @@
-import React from 'react';
-import {SafeAreaView, Text} from "react-native";
-// import { View, Text, StyleSheet } from 'react-native';
-// // import { ProtectedRoute } from '../../../src/components/ProtectedRoute';
-// import { AdminDashboard } from '../../../src/components/admin/AdminDashboard';
+import { Text, View } from 'react-native';
+import {useSession} from "@/components/AuthContext";
 
-export default function AdminDashboardScreen() {
+
+export default function Index() {
+    const { signOut } = useSession();
     return (
-        <SafeAreaView>
-            <Text>this is admin side</Text>
-        </SafeAreaView>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>
+                admin
+            </Text>
+        </View>
     );
 }

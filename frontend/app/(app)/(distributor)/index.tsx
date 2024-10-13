@@ -1,13 +1,18 @@
-import React from 'react';
-import {SafeAreaView, Text} from "react-native";
-// import { View, Text, StyleSheet } from 'react-native';
-// // import { ProtectedRoute } from '../../../src/components/ProtectedRoute';
-// import { AdminDashboard } from '../../../src/components/admin/AdminDashboard';
+import { Text, View } from 'react-native';
+import {useSession} from "@/components/AuthContext";
 
-export default function DistributorDashboardScreen() {
+
+export default function Index() {
+    const { signOut } = useSession();
     return (
-        <SafeAreaView>
-            <Text>this is distributor side</Text>
-        </SafeAreaView>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text
+                onPress={() => {
+                    // The `app/(app)/_layout.tsx` will redirect to the sign-in screen.
+                    signOut();
+                }}>
+                distributor
+            </Text>
+        </View>
     );
 }
