@@ -1,0 +1,213 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMode {
+  CASH
+  CARD
+  UPI
+  CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+}
+
+enum UserRole {
+  ADMIN
+  SALESPERSON
+  DISTRIBUTOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// Admin Model
+model Admin {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  email     String     @unique
+  password  String
+  name      String
+  phone     String
+  role      UserRole   @default(ADMIN)
+  adminCode String     @unique
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  salesPersons Salesperson[] @relation("AdminToSalesperson")
+  distributors Distributor[] @relation("AdminToDistributor")
+  products     Product[]     @relation("AdminToProduct")
+}
+
+// Salesperson Model
+model Salesperson {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  email      String     @unique
+  password   String // Will be set by admin initially
+  name       String
+  phone      String
+  role       UserRole   @default(SALESPERSON)
+  employeeId String     @unique
+  panNumber  String?
+  city       String?
+  address    String?
+  status     UserStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relations
+  admin   Admin   @relation("AdminToSalesperson", fields: [adminId], references: [id])
+  adminId String  @db.ObjectId
+  shops   Shop[]  @relation("SalespersonToShop")
+  orders  Order[] @relation("SalespersonToOrder")
+}
+
+// Distributor Model
+model Distributor {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  email         String     @unique
+  password      String // Will be set by admin initially
+  name          String
+  phone         String
+  role          UserRole   @default(DISTRIBUTOR)
+  distributorId String     @unique
+  panNumber     String?
+  gstId         String?
+  city          String?
+  address       String?
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  admin   Admin   @relation("AdminToDistributor", fields: [adminId], references: [id])
+  adminId String  @db.ObjectId
+  orders  Order[] @relation("DistributorToOrder")
+}
+
+// Base User fields (not an actual model, just for reference)
+// type UserFields {
+//   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+//   email     String   @unique
+//   password  String
+//   name      String
+//   phone     String
+//   role      UserRole
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+// Shop Model
+model Shop {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  ownerName String
+  gstNumber String?
+  panNumber String?
+  phone     String
+  email     String?
+  address   String
+  city      String
+  state     String
+  pincode   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  salesperson   Salesperson? @relation("SalespersonToShop", fields: [salespersonId], references: [id])
+  salespersonId String?      @db.ObjectId
+  orders        Order[]      @relation("ShopToOrder")
+}
+
+// Product Model
+model Product {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  price       Float
+  category    String
+  stock       Int
+  sku         String   @unique
+  images      String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin      Admin       @relation("AdminToProduct", fields: [adminId], references: [id])
+  adminId    String      @db.ObjectId
+  orderItems OrderItem[]
+}
+
+// Order Model
+model Order {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber String      @unique
+  status      OrderStatus @default(PENDING)
+  totalAmount Float
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  shop          Shop        @relation("ShopToOrder", fields: [shopId], references: [id])
+  shopId        String      @db.ObjectId
+  salesperson   Salesperson @relation("SalespersonToOrder", fields: [salespersonId], references: [id])
+  salespersonId String      @db.ObjectId
+  distributor   Distributor @relation("DistributorToOrder", fields: [distributorId], references: [id])
+  distributorId String      @db.ObjectId
+  items         OrderItem[]
+  payment       Payment?
+}
+
+// OrderItem Model
+model OrderItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+  productId String  @db.ObjectId
+}
+
+// Payment Model
+model Payment {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  mode      PaymentMode
+  status    PaymentStatus @default(PENDING)
+  reference String? // For transaction reference
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String @unique @db.ObjectId
+}

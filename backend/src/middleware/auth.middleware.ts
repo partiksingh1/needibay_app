@@ -1,8 +1,10 @@
-// backend/src/middleware/auth.ts
+// src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
-import { UserRole } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 import { JWTPayload } from '../types/auth.types';
+
+const prisma = new PrismaClient();
 
 declare global {
     namespace Express {
@@ -21,27 +23,32 @@ export const authenticate = async (
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
-            return res.status(401).json({ error: 'Authentication required' });
+             res.status(401).json({ error: 'Authentication required' });
+             return;
         }
 
-        const decoded = verifyToken(token) as JWTPayload;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
         req.user = decoded;
+
         next();
     } catch (error) {
         res.status(401).json({ error: 'Invalid token' });
+        return;
     }
 };
 
-export const authorize = (allowedRoles: UserRole[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
-        if (!req.user) {
-            return res.status(401).json({ error: 'Authentication required' });
+export const authorizeAdmin = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        if (req.user?.role !== 'ADMIN') {
+             res.status(403).json({ error: 'Admin access required' });
+            return;
         }
-
-        if (!allowedRoles.includes(req.user.role)) {
-            return res.status(403).json({ error: 'Insufficient permissions' });
-        }
-
         next();
-    };
+    } catch (error) {
+        next(error);
+    }
 };
